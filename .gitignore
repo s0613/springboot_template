@@ -1,3 +1,8 @@
+# ============================================================================
+# Spring Boot Template .gitignore
+# ============================================================================
+
+# Gradle
 HELP.md
 .gradle
 build/
@@ -5,7 +10,22 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### STS ###
+# Maven (if ever used)
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE - IntelliJ IDEA
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# IDE - Eclipse / STS
 .apt_generated
 .classpath
 .factorypath
@@ -17,21 +37,67 @@ bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
+# IDE - VS Code
+.vscode/
 
-### NetBeans ###
+# IDE - NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
-.vscode/
+# OS Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Environment Files (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.p12
+*.jks
+credentials.json
+
+# Logs
+*.log
+logs/
+
+# Application specific overrides
+application-local.yml
+application-*.local.yml
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Test outputs
+test-output/
+test-results/
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# Docker (local volumes)
+docker-data/
+
+# Uploaded files (if stored locally)
+uploads/
+
+# Generated documentation
+docs/generated/
