@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: template-app
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - DATABASE_URL=jdbc:postgresql://postgres:5432/template_db
+      - DATABASE_USERNAME=template_user
+      - DATABASE_PASSWORD=template_pass
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-local-development-secret-key-must-be-at-least-32-characters-long}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - template-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: template-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=template_db
+      - POSTGRES_USER=template_user
+      - POSTGRES_PASSWORD=template_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U template_user -d template_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - template-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: template-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - template-network
+    restart: unless-stopped
+
+networks:
+  template-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
