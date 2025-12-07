@@ -47,6 +47,7 @@ public class SignupRequest {
     @AssertTrue(message = "Service consent must be accepted")
     private Boolean consentService;
 
+    @Builder.Default
     private Boolean consentMarketing = false;
 
     @NotNull(message = "Account type is required")

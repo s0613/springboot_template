@@ -37,12 +37,15 @@ public class User {
     private Gender gender;
 
     @Column(name = "consent_privacy", nullable = false)
+    @Builder.Default
     private Boolean consentPrivacy = false;
 
     @Column(name = "consent_service", nullable = false)
+    @Builder.Default
     private Boolean consentService = false;
 
     @Column(name = "consent_marketing", nullable = false)
+    @Builder.Default
     private Boolean consentMarketing = false;
 
     @Column(name = "password", length = 255)
