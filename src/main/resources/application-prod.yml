@@ -1,0 +1,102 @@
+# Production Environment Profile
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  flyway:
+    enabled: true
+    clean-disabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  thymeleaf:
+    cache: true
+
+# Server
+server:
+  tomcat:
+    max-threads: 400
+    min-spare-threads: 20
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.template.app: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: WARN
+
+# AWS
+aws:
+  s3:
+    enabled: true
+  ses:
+    enabled: true
+  sns:
+    enabled: true
+
+# NCP SMS
+ncp:
+  sms:
+    enabled: true
+
+# Rate limiting
+rate-limit:
+  enabled: true
+  default:
+    capacity: 100
+    refill-tokens: 100
+    refill-duration: 60
+
+# Circuit Breaker - Stricter settings for production
+resilience4j:
+  circuitbreaker:
+    instances:
+      email-service:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 60s
+      sms-service:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 60s
+      sns-service:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 120s
+
+# Notification DLQ
+notification:
+  dlq:
+    enabled: true
+
+# Scheduling
+scheduling:
+  enabled: true
+
+# Management / Actuator - More restrictive
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never

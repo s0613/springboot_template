@@ -1,0 +1,60 @@
+# Development Environment Profile
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+    clean-disabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD:}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.template.app: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.security: INFO
+
+# AWS
+aws:
+  s3:
+    enabled: ${AWS_S3_ENABLED:true}
+  ses:
+    enabled: ${AWS_SES_ENABLED:true}
+  sns:
+    enabled: ${AWS_SNS_ENABLED:false}
+
+# NCP SMS
+ncp:
+  sms:
+    enabled: ${NCP_SMS_ENABLED:true}
+
+# Rate limiting
+rate-limit:
+  enabled: true
+  default:
+    capacity: 200
+    refill-tokens: 200
+    refill-duration: 60
+
+# Notification DLQ
+notification:
+  dlq:
+    enabled: true
+
+# Scheduling
+scheduling:
+  enabled: true

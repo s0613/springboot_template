@@ -1,0 +1,222 @@
+spring:
+  application:
+    name: template-app
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  # Database
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/template_db}
+    username: ${DATABASE_USERNAME:template_user}
+    password: ${DATABASE_PASSWORD:template_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:10}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      idle-timeout: ${HIKARI_IDLE_TIMEOUT:300000}
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT:20000}
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: public
+    open-in-view: false
+
+  # Flyway
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Jackson
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: Asia/Seoul
+
+  # Async
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 8
+        queue-capacity: 100
+      thread-name-prefix: async-
+
+  # Thymeleaf (for email templates)
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: true
+
+# Server
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+  tomcat:
+    max-threads: 200
+    min-spare-threads: 10
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.template.app: ${LOG_LEVEL:DEBUG}
+    org.springframework.security: INFO
+    org.hibernate.SQL: ${HIBERNATE_SQL_LOG_LEVEL:DEBUG}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${HIBERNATE_PARAM_LOG_LEVEL:TRACE}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-here-must-be-at-least-32-characters}
+  access-token:
+    expiration: ${JWT_ACCESS_EXPIRATION:3600000}  # 1 hour
+  refresh-token:
+    expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
+
+# AWS Configuration
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY:}
+    secret-key: ${AWS_SECRET_KEY:}
+  s3:
+    enabled: ${AWS_S3_ENABLED:false}
+    bucket: ${AWS_S3_BUCKET:template-bucket}
+    presigned-url-expiration: 3600
+  ses:
+    enabled: ${AWS_SES_ENABLED:false}
+    from-email: ${AWS_SES_FROM_EMAIL:noreply@example.com}
+    from-name: ${AWS_SES_FROM_NAME:Template App}
+  sns:
+    enabled: ${AWS_SNS_ENABLED:false}
+    platform-application-arn:
+      android: ${AWS_SNS_ANDROID_ARN:}
+      ios: ${AWS_SNS_IOS_ARN:}
+
+# NCP (Naver Cloud Platform) SMS
+ncp:
+  sms:
+    enabled: ${NCP_SMS_ENABLED:false}
+    access-key: ${NCP_ACCESS_KEY:}
+    secret-key: ${NCP_SECRET_KEY:}
+    service-id: ${NCP_SMS_SERVICE_ID:}
+    sender-phone: ${NCP_SMS_SENDER_PHONE:}
+
+# OAuth2
+oauth2:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+  apple:
+    client-id: ${APPLE_CLIENT_ID:}
+    team-id: ${APPLE_TEAM_ID:}
+    key-id: ${APPLE_KEY_ID:}
+    private-key: ${APPLE_PRIVATE_KEY:}
+
+# Rate Limiting
+rate-limit:
+  enabled: ${RATE_LIMIT_ENABLED:true}
+  default:
+    capacity: 100
+    refill-tokens: 100
+    refill-duration: 60  # seconds
+
+# Circuit Breaker (Resilience4j)
+resilience4j:
+  circuitbreaker:
+    instances:
+      email-service:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      sms-service:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      sns-service:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+  retry:
+    instances:
+      email-service:
+        max-attempts: 3
+        wait-duration: 1s
+      sms-service:
+        max-attempts: 3
+        wait-duration: 1s
+
+# Notification DLQ
+notification:
+  dlq:
+    enabled: ${NOTIFICATION_DLQ_ENABLED:false}
+
+# Payment
+payment:
+  pg:
+    client-key: ${PAYMENT_PG_CLIENT_KEY:}
+    secret-key: ${PAYMENT_PG_SECRET_KEY:}
+  success-url: ${PAYMENT_SUCCESS_URL:}
+  fail-url: ${PAYMENT_FAIL_URL:}
+
+# Scheduling
+scheduling:
+  enabled: ${SCHEDULING_ENABLED:true}
+
+# Springdoc OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# Management / Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
