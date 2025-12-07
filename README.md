@@ -32,6 +32,24 @@
 - 결제 생명주기 관리 (생성 → 승인 → 취소)
 - 부분 환불 지원
 
+### 파일 관리 (File)
+- S3/로컬 스토리지 추상화
+- Presigned URL 지원 (업로드/다운로드)
+- 파일 메타데이터 DB 저장
+- 파일 카테고리 및 참조 관리
+
+### 감사 로그 (Audit)
+- Entity 변경 이력 추적
+- 사용자 액션 로깅 (로그인, CRUD)
+- AOP 기반 자동 감사 (@Audited 어노테이션)
+- 요청 정보 자동 수집 (IP, User-Agent)
+
+### 스케줄러 (Scheduler)
+- Redis 기반 분산 락
+- 클러스터 환경 중복 실행 방지
+- 작업 실행 이력 관리
+- @ScheduledWithLock 어노테이션
+
 ### 인프라
 - Rate Limiting (Bucket4j + Redis)
 - Circuit Breaker (Resilience4j)
@@ -125,13 +143,43 @@ src/main/java/com/template/app/
 │   ├── repository/                 # JPA Repositories
 │   └── service/                    # EmailService, PushNotificationService, DLQ
 │
-└── payment/                        # 결제 모듈
+├── payment/                        # 결제 모듈
+│   ├── api/
+│   │   ├── controller/             # PaymentController
+│   │   └── dto/                    # PaymentRequest, PaymentResponse
+│   ├── domain/
+│   │   └── entity/                 # Payment
+│   └── service/                    # PaymentService
+│
+├── file/                           # 파일 관리 모듈
+│   ├── api/
+│   │   ├── controller/             # FileController
+│   │   └── dto/                    # FileResponse, PresignedUrlResponse
+│   ├── domain/
+│   │   └── entity/                 # FileMetadata
+│   ├── repository/                 # FileMetadataRepository
+│   └── service/                    # FileService, S3/LocalFileStorageService
+│
+├── audit/                          # 감사 로그 모듈
+│   ├── api/
+│   │   └── controller/             # AuditController
+│   ├── annotation/                 # @Audited
+│   ├── aspect/                     # AuditAspect
+│   ├── domain/
+│   │   └── entity/                 # AuditLog
+│   ├── repository/                 # AuditLogRepository
+│   └── service/                    # AuditService
+│
+└── scheduler/                      # 스케줄러 모듈
     ├── api/
-    │   ├── controller/             # PaymentController
-    │   └── dto/                    # PaymentRequest, PaymentResponse
+    │   └── controller/             # SchedulerController
+    ├── annotation/                 # @ScheduledWithLock
+    ├── aspect/                     # SchedulerLockAspect
     ├── domain/
-    │   └── entity/                 # Payment
-    └── service/                    # PaymentService
+    │   └── entity/                 # SchedulerJobHistory
+    ├── jobs/                       # ExampleScheduledJobs
+    ├── repository/                 # SchedulerJobHistoryRepository
+    └── service/                    # SchedulerService, DistributedLockService
 ```
 
 ## 환경 변수 설정
@@ -187,6 +235,34 @@ KAKAO_CLIENT_ID=...
 | GET | `/api/v1/payments/my` | 내 결제 내역 |
 | POST | `/api/v1/payments/{id}/cancel` | 결제 취소 |
 
+### 파일 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/v1/files` | 파일 업로드 |
+| GET | `/api/v1/files/{id}` | 파일 메타데이터 조회 |
+| GET | `/api/v1/files/{id}/download-url` | 다운로드 URL 생성 |
+| GET | `/api/v1/files/presigned-upload-url` | 업로드 URL 생성 |
+| GET | `/api/v1/files/my` | 내 파일 목록 |
+| DELETE | `/api/v1/files/{id}` | 파일 삭제 |
+
+### 감사 로그 API (Admin)
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/v1/audit/entity/{type}/{id}` | Entity 변경 이력 |
+| GET | `/api/v1/audit/actor/{actorId}` | 사용자 액션 이력 |
+| GET | `/api/v1/audit/search` | 감사 로그 검색 |
+
+### 스케줄러 API (Admin)
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/v1/scheduler/jobs/{name}/history` | 작업 실행 이력 |
+| GET | `/api/v1/scheduler/jobs/recent` | 최근 실행된 작업 |
+| GET | `/api/v1/scheduler/stats` | 작업 통계 |
+| GET | `/api/v1/scheduler/health` | 스케줄러 상태 |
+
 ### 모니터링 API
 
 | Method | Endpoint | 설명 |
@@ -206,10 +282,11 @@ Flyway 마이그레이션 파일 위치: `src/main/resources/db/migration/`
 | V2 | create_auth_tables.sql | 인증 테이블 (토큰, 로그인시도, SMS) |
 | V3 | create_notification_tables.sql | 알림 테이블 (이메일, 푸시, DLQ) |
 | V4 | create_payments_table.sql | 결제 테이블 |
+| V5 | create_file_audit_scheduler_tables.sql | 파일, 감사로그, 스케줄러 테이블 |
 
 새 마이그레이션 추가:
 ```bash
-touch src/main/resources/db/migration/V5__description.sql
+touch src/main/resources/db/migration/V6__description.sql
 ```
 
 ## Docker 배포
@@ -254,6 +331,54 @@ docker build -t my-app:latest .
 // confirmPayment() 메서드에서:
 // TODO: Call PG provider's confirm API here
 TossPaymentsResponse response = tossPaymentsClient.confirmPayment(request);
+```
+
+### 감사 로그 사용
+
+서비스 메서드에 `@Audited` 어노테이션 추가:
+
+```java
+@Audited(action = AuditAction.UPDATE, entityType = "User", entityIdExpression = "#id")
+public User updateUser(Long id, UpdateRequest request) {
+    // 변경 로직
+}
+```
+
+또는 직접 AuditService 호출:
+
+```java
+auditService.logUpdate("User", userId, actorId, oldUser, newUser, "name,email");
+```
+
+### 분산 락 스케줄러 사용
+
+스케줄 메서드에 `@ScheduledWithLock` 어노테이션 추가:
+
+```java
+@Scheduled(cron = "0 0 * * * *")
+@ScheduledWithLock(
+    lockKey = "my-hourly-job",
+    lockDurationSeconds = 600,
+    jobGroup = "batch"
+)
+public Integer myHourlyJob() {
+    // 작업 실행
+    return processedCount;
+}
+```
+
+### 파일 업로드 구현
+
+FileService 사용:
+
+```java
+// 일반 업로드
+FileMetadata metadata = fileService.uploadFile(file, "profiles", FileCategory.PROFILE_IMAGE, userId);
+
+// Presigned URL로 직접 업로드
+var uploadInfo = fileService.getPresignedUploadUrl("uploads", "file.pdf", "application/pdf", Duration.ofMinutes(15));
+// 클라이언트가 uploadInfo.presignedUrl()로 직접 업로드 후
+fileService.confirmDirectUpload(uploadInfo.filePath(), ...);
 ```
 
 ## 라이선스
